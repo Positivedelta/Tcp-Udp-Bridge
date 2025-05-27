@@ -1,0 +1,2 @@
+bitparallel.applications.TcpUdpBridge -> x:
+    void main(java.lang.String[]) -> main

@@ -1,0 +1,189 @@
+<!--                                 -->
+<!-- (c) Bit Parallel Ltd - May 2025 -->
+<!--                                 -->
+
+<project name="TCP UDP Bridge" default="jar" basedir=".">
+    <description>TCP UDP Bridge Application</description>
+
+    <taskdef resource="proguard/ant/task.properties" classpath="lib/build/proguard-ant-7-7-0.jar"/>
+
+    <property environment="env"/>
+    <property name="src" location="src"/>
+    <property name="lib" location="lib"/>
+    <property name="build" location="build"/>
+    <property name="dist" location="."/>
+    <property name="images" location="resources/images"/>
+    <property name="log4jconf" value="log4j2.xml"/>
+    <property name="jarname" value="tcpudp-bridge.jar"/>
+    <property name="obfuscatedjarname" value="obfuscated-tcpudp-bridge.jar"/>
+    <property name="obfuscatedclassesjarname" value="obfuscated-classes.jar"/>
+    <property name="preobfuscateclassesjarname" value="pre-obfuscated-classes.jar"/>
+    <property name="obfuscatedfixedmappings" value="lib/build/fixed-mappings.txt"/>
+
+    <!-- generate version info to be included in the JAR manifest file -->
+    <!--                                                               -->
+    <tstamp>
+        <format property="buildtimestamp" pattern="yyyy-MM-dd HH:mm:ss"/>
+    </tstamp>
+
+    <!-- exec executable="git" outputproperty="buildgitcommithash">
+        <arg value="log"/>
+        <arg value="-1"/>
+        <arg value="-pretty=format:%H"/> // FIXME! put an additional '-' back in the pretty attribute
+    </exec -->
+
+    <property name="builduser" value="Max van Daalen"/>
+    <property name="buildemail" value="max.vandaalen@bitparallel.com"/>
+
+    <target name="init">
+        <tstamp/>
+        <mkdir dir="${build}"/>
+    </target>
+
+    <target name="tidy" description="Clean up, but leave the JAR file">
+        <delete dir="${build}"/>
+    </target>
+
+    <target name="clean" description="Clean up">
+        <delete dir="${build}"/>
+        <delete file="${dist}/${jarname}"/>
+        <delete file="${dist}/${obfuscatedjarname}"/>
+        <delete file="${dist}/${obfuscatedclassesjarname}"/>
+        <delete file="${dist}/${preobfuscateclassesjarname}"/>
+    </target>
+
+    <target name="compile" depends="clean,init" description="Compile source files">
+        <echo>Building from the git commit tag: ${buildgitcommithash}</echo>
+        <echo>JavaFX Library Path: ${env.PATH_TO_JAVAFX}</echo>
+        <javac includeantruntime="false" srcdir="${src}" destdir="${build}" modulepath="${env.PATH_TO_JAVAFX}" upgrademodulepath="${env.PATH_TO_JAVAFX}">
+            <classpath>
+                <fileset dir="${lib}">
+                    <include name="**/*.jar"/>
+                </fileset>
+            </classpath>
+            <compilerarg line="--add-modules ALL-MODULE-PATH"/>
+            <compilerarg value="-proc:full"/>
+            <compilerarg value="-version"/>
+        </javac>
+    </target>
+
+    <!--                        -->
+    <!-- non-obfuscated targets -->
+    <!--                        -->
+
+    <target name="jar" depends="compile" description="Build the JAR file">
+        <jar jarfile="${dist}/${jarname}">
+            <fileset dir="${build}"/>
+            <fileset dir="${images}"/>
+            <zipgroupfileset dir="${lib}/log4j" includes="**/*.jar"/>
+            <file name="${log4jconf}"/>
+
+            <manifest>
+                <attribute name="Main-Class" value="bitparallel.applications.TcpUdpBridge"/>
+                <attribute name="Multi-Release" value="true"/>
+                <attribute name="Build-Name" value="${ant.project.name}"/>
+                <attribute name="Build-Git-Hash" value="${buildgitcommithash}"/>
+                <attribute name="Build-Date" value="${buildtimestamp}"/>
+                <attribute name="Built-By" value="${builduser} (${buildemail})"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="run" depends="jar" description="Build execute the JAR">
+        <java jar="${dist}/${jarname}" modulepath="${env.PATH_TO_JAVAFX}" fork="true">
+            <jvmarg line="--add-modules ALL-MODULE-PATH"/>
+            <jvmarg line="--upgrade-module-path='${env.PATH_TO_JAVAFX}'"/>
+            <jvmarg line="--enable-native-access=javafx.graphics,javafx.media,javafx.web"/>
+            <jvmarg line="--sun-misc-unsafe-memory-access=allow"/> <!-- required until JDK-8334137 has been fixed, should happen with JavaFX 25 -->
+        </java>
+    </target>
+
+    <target name="go" description="Execute the JAR">
+        <java jar="${dist}/${jarname}" modulepath="${env.PATH_TO_JAVAFX}" fork="true">
+            <jvmarg line="--add-modules ALL-MODULE-PATH"/>
+            <jvmarg line="--upgrade-module-path='${env.PATH_TO_JAVAFX}'"/>
+            <jvmarg line="--enable-native-access=javafx.graphics,javafx.media,javafx.web"/>
+            <jvmarg line="--sun-misc-unsafe-memory-access=allow"/> <!-- required until JDK-8334137 has been fixed, should happen with JavaFX 25 -->
+        </java>
+    </target>
+
+    <!--                     -->
+    <!-- obfuscation targets -->
+    <!--                     -->
+
+    <target name="jar-obfuscate" depends="obfuscate-classes" description="Build the obfuscated JAR file">
+        <echo>Building the obfuscated JAR file</echo>
+
+        <jar jarfile="${dist}/${obfuscatedjarname}">
+            <zipfileset src="${dist}/${obfuscatedclassesjarname}"/>
+            <fileset dir="${images}"/>
+            <zipgroupfileset dir="${lib}/log4j" includes="**/*.jar"/>
+            <file name="${log4jconf}"/>
+
+            <manifest>
+                <!-- this is defined in me-fixed-mappings.txt -->
+                <!-- -->
+                <attribute name="Main-Class" value="x"/>
+                <attribute name="Multi-Release" value="true"/>
+                <attribute name="Build-Name" value="${ant.project.name}"/>
+                <attribute name="Build-Git-Hash" value="${buildgitcommithash}"/>
+                <attribute name="Build-Date" value="${buildtimestamp}"/>
+                <attribute name="Built-By" value="${builduser} (${buildemail})"/>
+            </manifest>
+        </jar>
+
+        <delete file="${dist}/${obfuscatedclassesjarname}"/>
+    </target>
+
+    <target name="run-obfuscate" depends="jar-obfuscate" description="Build and execute the obfuscated JAR">
+        <java jar="${dist}/${obfuscatedjarname}" modulepath="${env.PATH_TO_JAVAFX}" fork="true">
+            <jvmarg line="--add-modules ALL-MODULE-PATH"/>
+            <jvmarg line="--upgrade-module-path='${env.PATH_TO_JAVAFX}'"/>
+            <jvmarg line="--enable-native-access=javafx.graphics,javafx.media,javafx.web"/>
+            <jvmarg line="--sun-misc-unsafe-memory-access=allow"/> <!-- required until JDK-8334137 has been fixed, should happen with JavaFX 25 -->
+        </java>
+    </target>
+
+    <target name="go-obfuscate" description="Execute the obfuscated JAR">
+        <java jar="${dist}/${obfuscatedjarname}" modulepath="${env.PATH_TO_JAVAFX}" fork="true">
+            <jvmarg line="--add-modules ALL-MODULE-PATH"/>
+            <jvmarg line="--upgrade-module-path='${env.PATH_TO_JAVAFX}'"/>
+            <jvmarg line="--enable-native-access=javafx.graphics,javafx.media,javafx.web"/>
+            <jvmarg line="--sun-misc-unsafe-memory-access=allow"/> <!-- required until JDK-8334137 has been fixed, should happen with JavaFX 25 -->
+        </java>
+    </target>
+
+    <target name="obfuscate-classes" depends="pre-jar-obfuscated-classes">
+        <proguard allowaccessmodification="false" usemixedcaseclassnames="false" defaultpackage="" skipnonpubliclibraryclasses="false">
+            -dontoptimize
+            -dontwarn bitparallel.applications.TcpUdpBridge
+            -applymapping ${obfuscatedfixedmappings}
+
+            <libraryjar file="${java.home}/jmods/java.base.jmod" jarfilter="!**.jar" filter="!module-info.class"/>
+            <libraryjar name="${env.PATH_TO_JAVAFX}/javafx.base.jar" filter="!module-info.class"/>
+            <libraryjar name="${env.PATH_TO_JAVAFX}/javafx.controls.jar" filter="!module-info.class"/>
+            <libraryjar name="${env.PATH_TO_JAVAFX}/javafx.graphics.jar" filter="!module-info.class"/>
+            <libraryjar name="${dist}/lib/log4j/log4j-api-2.14.1.jar"/>
+            <libraryjar name="${dist}/lib/log4j/log4j-core-2.14.1.jar"/>
+
+            <!-- this class gets mapped anyway as it is specified in me-fixed-mappings.txt file -->
+            <!-- proguard moans if there is no keep tag, so not sure one this is still needed!  -->
+            <!-- the token keep... it's the main entry point, perhaps it should be kept anyway  -->
+            <!-- -->
+            <keep name="bitparallel.applications.TcpUdpBridge">
+                <method name="main"/>
+            </keep>
+
+            <injar name="${dist}/${preobfuscateclassesjarname}"/>
+            <outjar name="${dist}/${obfuscatedclassesjarname}"/>
+        </proguard>
+
+        <delete file="${dist}/${preobfuscateclassesjarname}"/>
+    </target>
+
+    <target name="pre-jar-obfuscated-classes" depends="compile">
+        <jar jarfile="${dist}/${preobfuscateclassesjarname}">
+            <fileset dir="${build}"/>
+        </jar>
+    </target>
+</project>
