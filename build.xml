@@ -26,11 +26,11 @@
         <format property="buildtimestamp" pattern="yyyy-MM-dd HH:mm:ss"/>
     </tstamp>
 
-    <!-- exec executable="git" outputproperty="buildgitcommithash">
+    <exec executable="git" outputproperty="buildgitcommithash">
         <arg value="log"/>
         <arg value="-1"/>
-        <arg value="-pretty=format:%H"/> // FIXME! put an additional '-' back in the pretty attribute
-    </exec -->
+        <arg value="--pretty=format:%H"/>
+    </exec>
 
     <property name="builduser" value="Max van Daalen"/>
     <property name="buildemail" value="max.vandaalen@bitparallel.com"/>

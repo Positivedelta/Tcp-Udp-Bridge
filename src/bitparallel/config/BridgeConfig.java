@@ -40,7 +40,7 @@ public class BridgeConfig extends Properties implements Endpoints
     {
         load();
 
-        // FIXME! remove once tested...
+/*      // FIXME! remove once tested...
         //
         clear();
         setProperty("server.useAssignedIp", "true");
@@ -48,7 +48,7 @@ public class BridgeConfig extends Properties implements Endpoints
         setProperty("server.tcpport", "11013");
         setProperty("endpoint.1", "192.168.8.249:1234");
         setProperty("endpoint.2", "192.168.8.250:1234");
-        save();
+        save(); */
     }
 
     public final void load()
@@ -57,7 +57,7 @@ public class BridgeConfig extends Properties implements Endpoints
         {
             try (final var is = new FileInputStream(CONFIG_FILE))
             {
-                load(is);
+                loadFromXML(is);
             }
             catch (final IOException ex)
             {
@@ -84,7 +84,7 @@ public class BridgeConfig extends Properties implements Endpoints
         }
     }
 
-    public final SocketAddress getServer() throws ServerConfigurationException
+    public final SocketAddress getServerSocketAddress() throws ServerConfigurationException
     {
         if (containsKey(SERVER_PORT_NUMBER_KEY))
         {

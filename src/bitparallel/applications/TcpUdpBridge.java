@@ -8,11 +8,13 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.jar.JarFile;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 import bitparallel.config.BridgeConfig;
+import bitparallel.communications.ConnectionServer;
 
 public class TcpUdpBridge
 {
@@ -47,13 +49,32 @@ public class TcpUdpBridge
 
     public final static void main(final String[] args)
     {
-//      logger.info("TCP to UDP Bridge"); // FIXME! add the git build information
+        var buildDate = "Not Available";
+        var buildHash = "Not Available";
+        try
+        {
+            final var jarFile = new File(TcpUdpBridge.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            if (jarFile.isFile())
+            {
+                final var jar = new JarFile(jarFile);
+                final var manifest = jar.getManifest();
+                final var attributes = manifest.getMainAttributes();
+                buildDate = attributes.getValue("Build-Date");
+                buildHash = attributes.getValue("Build-Git-Hash");
+            }
+        }
+        catch (final Exception ex)
+        {
+            logger.error("Unable to extract the build information from the associated JAR file");
+            logger.error(ex.getMessage());
+        }
 
-        final var p1 = new BridgeConfig();
-        for (final var endpoint : p1.getConnections()) System.out.println(endpoint);
-        System.out.println();
-        System.out.println();
+        logger.info("TCP to UDP Bridge, developed by Bit Parallel Ltd in May 2025");
+        logger.info("Build date: " + buildDate);
+        logger.info("Git commit hash: " + buildHash);
 
-        for (final var endpoint : p1.clone().getConnections()) System.out.println(endpoint);
+        final var config = new BridgeConfig();
+        final var server = new ConnectionServer(config);
+        server.start();
     }
 }
