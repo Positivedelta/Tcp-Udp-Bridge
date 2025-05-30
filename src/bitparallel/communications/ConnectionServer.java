@@ -44,7 +44,8 @@ public class ConnectionServer
                     try
                     {
                         final var connection = listenSocket.accept();
-                        executor.submit(new ConnectionHandler(connection));
+                        final var endpoints = config.clone().getConnections();
+                        executor.submit(new ConnectionHandler(connection, endpoints));
                     }
                     catch (final SocketTimeoutException ignored)
                     {
